@@ -1,0 +1,54 @@
+# =============================================================================
+# 本地运行配置模板
+# 用法：复制为 local_config.yaml 后填入真实密钥，再重启服务
+#   cp local_config.example.yaml local_config.yaml
+# =============================================================================
+
+# ── LLM（OpenAI 兼容）──
+llm:
+  provider: openai
+  base_url: https://api.ali.cdn.pianke.xyz/v1
+  api_key: your-llm-api-key
+  model: deepseek/deepseek-v4-flash
+  # 第 1 步「分析模型」下拉选项
+  models:
+    - deepseek/deepseek-v4-flash
+    - deepseek/deepseek-v4-pro
+
+# ── Google Stitch MCP ──
+stitch:
+  api_key: your-stitch-api-key
+  mcp_url: https://stitch.googleapis.com/mcp
+  oauth_token: ""
+  oauth_client_id: ""
+  oauth_client_secret: ""
+
+# ── uni-app 模板与输出 ──
+uniapp:
+  template_dir: /path/to/uniapp_base
+  output_dir: /path/to/output
+
+# ── 代码生成 CLI ──
+codegen:
+  codex_bin: codex
+  codex_model: ""
+  codex_sandbox: workspace-write
+  claude_bin: claude
+  claude_model: ""
+  cursor_bin: agent   # 也可用 cursor（将自动变为 cursor agent）；勿用 GUI 的 cursor composer
+  cursor_model: ""
+
+# ── HBuilderX（第 8 步「测试」运行到 Chrome）──
+hbuilderx:
+  app: /Applications/HBuilderX.app
+  # cli: /Applications/HBuilderX.app/Contents/MacOS/cli
+
+# ── 发布（推送到 Git 仓库分支）──
+publish:
+  default_repo: /Users/shihongwei/uniapp1/uniapp
+  base_branch: main
+
+# ── Web 服务 ──
+server:
+  host: 0.0.0.0
+  port: 8765

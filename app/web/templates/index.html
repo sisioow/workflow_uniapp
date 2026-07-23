@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>App 生成工作流</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <!-- 左侧边栏：项目列表 -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h3>📁 工作流项目</h3>
+        <div class="sidebar-actions">
+          <button type="button" class="btn-icon btn-new-white" id="btnNewProject" title="新建工作流任务">
+            +
+          </button>
+          <button type="button" class="btn-icon" id="btnRefreshProjects" title="刷新项目列表">
+            🔄
+          </button>
+        </div>
+      </div>
+      <div class="projects-filter">
+        <label for="groupFilter">组号筛选</label>
+        <select id="groupFilter" title="按组号过滤项目">
+          <option value="">全部</option>
+          <option value="g1">g1</option>
+          <option value="g5">g5</option>
+          <option value="g7">g7</option>
+          <option value="g10">g10</option>
+          <option value="g11">g11</option>
+          <option value="__ungrouped__">未分组</option>
+        </select>
+      </div>
+      <div class="projects-list" id="projectsList">
+        <div class="projects-empty">暂无项目</div>
+      </div>
+      <div class="sidebar-footer">
+        <small>点击项目名称可切换</small>
+      </div>
+    </aside>
+
+    <!-- 主体内容 -->
+    <div class="main-container">
+    <header class="header">
+      <h1 id="pageTitle">App 生成工作流</h1>
+      <p class="subtitle">需求分析 → UI 设计 → 代码生成</p>
+    </header>
+
+    <nav class="steps" id="stepNav" aria-label="工作流步骤">
+      <button type="button" class="step-item active" data-step="input">1. 应用信息</button>
+      <button type="button" class="step-item" data-step="analyze">2. 需求分析</button>
+      <button type="button" class="step-item" data-step="review">3. 审核方案</button>
+      <button type="button" class="step-item" data-step="styles">4. UI 风格</button>
+      <button type="button" class="step-item" data-step="design">5. 设计生成</button>
+      <button type="button" class="step-item" data-step="plan">6. 选择方案</button>
+      <button type="button" class="step-item" data-step="codegen">7. 代码生成</button>
+      <button type="button" class="step-item" data-step="evaluate">8. 整理测试发布</button>
+    </nav>
+    <p class="nav-hint">点击上方步骤可自由切换查看各环节内容</p>
+
+    <main>
+      <section class="panel" id="panel-input">
+        <h2>项目基础信息</h2>
+        <form id="formStart">
+          <label>
+            应用名称
+            <input type="text" name="app_name" required placeholder="如：今日喝水" />
+          </label>
+          <label>
+            组号
+            <input type="text" name="group_no" maxlength="40" placeholder="如：g7" />
+          </label>
+          <label>
+            项目目录名
+            <input type="text" name="project_dir" required pattern="[a-z0-9_-]+" placeholder="如 huakaiduoduo" />
+          </label>
+          <label>
+            分析模型（可更换）
+            <select name="llm_model" id="llmModelSelect"></select>
+          </label>
+          <button type="submit" class="btn primary">开始分析</button>
+        </form>
+      </section>
+
+      <section class="panel hidden" id="panel-analyze">
+        <h2>需求分析</h2>
+        <div id="analyzeError" class="error-box hidden">
+          <div class="error-message" id="analyzeErrorMsg"></div>
+          <button type="button" class="btn btn-retry" id="btnRetryAnalyze">🔄 重试</button>
+        </div>
+        <div id="analyzeStatus" class="card"></div>
+        <pre class="log" id="analyzeLog"></pre>
+      </section>
+
+      <section class="panel hidden" id="panel-review">
+        <h2>审核需求方案</h2>
+        <p class="hint" id="reviewHint">系统已给出三套不同功能方向的方案，请选择其一后查看/修改，确认进入 UI 风格选择。</p>
+        <div id="requirementOptions" class="req-options"></div>
+        <div id="requirementView" class="card"></div>
+        <div id="requirementEditForm"></div>
+        <div class="review-retry card" id="reviewRetryBox">
+          <h4>重新生成方案</h4>
+          <p class="hint">不满意当前三套方案时，可补充提示词后重试（留空则按原规则重新分析）。</p>
+          <label>
+            补充提示词（可选）
+            <textarea id="retryAnalyzePrompt" rows="3" placeholder="例如：偏重习惯打卡；第三页要有统计；不要清单类方向…"></textarea>
+          </label>
+          <button type="button" class="btn btn-retry" id="btnRetryAnalyzeFromReview">🔄 重试分析</button>
+        </div>
+        <div class="panel-actions">
+          <button type="button" class="btn" id="btnSaveRequirement">保存修改</button>
+          <button type="button" class="btn primary" id="btnConfirmRequirement">确认方案，进入 UI 风格</button>
+        </div>
+      </section>
+
+      <section class="panel hidden" id="panel-styles">
+        <h2>视觉方案配置</h2>
+        <p class="hint">建议选择 1～3 套风格；每种风格将独立生成 Stitch 设计项目（各 4 页）。</p>
+        <div class="style-grid" id="styleGrid"></div>
+        <label>
+          配色（分号分隔，与风格顺序对应）
+          <textarea name="colors" id="colorInput" rows="2" placeholder="紫色；蓝色；绿色"></textarea>
+        </label>
+
+        <!-- 设计路线选择 -->
+        <div class="design-route-choice">
+          <h4>选择设计方式</h4>
+          <label class="route-option">
+            <input type="radio" name="designRoute" value="stitch" checked />
+            <span class="route-label">🎨 Stitch MCP 设计工具</span>
+            <small>通过 Google Stitch AI 生成高保真设计稿，再交给所选工具编码</small>
+          </label>
+          <label class="route-option">
+            <input type="radio" name="designRoute" value="codex" />
+            <span class="route-label">💻 跳过设计，直接代码生成</span>
+            <small>跳过 Stitch 设计，进入「选择方案」确认风格与代码生成工具后生成</small>
+          </label>
+        </div>
+
+        <button type="button" class="btn primary" id="btnStartDesign">开始生成</button>
+      </section>
+
+      <section class="panel hidden" id="panel-design">
+        <div class="panel-heading">
+          <h2>设计生成</h2>
+          <button type="button" class="btn btn-pause-step" id="btnPauseDesign" title="暂停当前设计生成" disabled>暂停</button>
+        </div>
+        <div id="designError" class="error-box hidden">
+          <div class="error-message" id="designErrorMsg"></div>
+          <button type="button" class="btn btn-retry" id="btnRetryDesign">🔄 重试</button>
+        </div>
+        <div id="designStatus" class="card"></div>
+        <div class="progress" id="designProgress"></div>
+        <pre class="log" id="logView"></pre>
+      </section>
+
+      <section class="panel hidden" id="panel-plan">
+        <h2>选择最终方案</h2>
+        <div id="planList"></div>
+        <fieldset>
+          <legend>前端框架</legend>
+          <label><input type="radio" name="framework" value="vue" checked /> Vue (uni-app)</label>
+        </fieldset>
+
+        <!-- 代码生成工具选择（与上一步共用 name=codegenTool，由 JS 同步选中项） -->
+        <div class="codegen-tool-choice" id="codegenToolInPlan">
+          <h4>选择代码生成工具</h4>
+          <label class="tool-option">
+            <input type="radio" name="codegenToolPlan" value="claude" checked />
+            <span class="tool-label">🧠 Claude Code</span>
+            <small>Anthropic Claude Code CLI（默认），擅长创意与代码质量</small>
+          </label>
+          <label class="tool-option">
+            <input type="radio" name="codegenToolPlan" value="codex" />
+            <span class="tool-label">⚡ Codex</span>
+            <small>OpenAI Codex CLI，沙箱模式，适合结构化生成</small>
+          </label>
+          <label class="tool-option">
+            <input type="radio" name="codegenToolPlan" value="cursor" />
+            <span class="tool-label">📝 Cursor Agent</span>
+            <small>Cursor `agent` CLI，IDE 集成体验</small>
+          </label>
+        </div>
+
+        <button type="button" class="btn primary" id="btnConfirmPlan">确认并生成代码</button>
+      </section>
+
+      <section class="panel hidden" id="panel-codegen">
+        <div class="panel-heading">
+          <h2>代码生成</h2>
+          <button type="button" class="btn btn-pause-step" id="btnPauseCodegen" title="暂停当前代码生成" disabled>暂停</button>
+        </div>
+        <div class="codegen-split">
+          <div class="codegen-main">
+            <div id="codegenError" class="error-box hidden">
+              <div class="error-message" id="codegenErrorMsg"></div>
+              <button type="button" class="btn btn-retry" id="btnRetryCodegen">🔄 重试</button>
+            </div>
+            <div class="codegen-tool-choice" id="codegenToolInCodegen">
+              <h4>代码生成工具</h4>
+              <label class="tool-option">
+                <input type="radio" name="codegenToolPanel" value="claude" checked />
+                <span class="tool-label">🧠 Claude Code</span>
+                <small>Anthropic Claude Code CLI（默认）</small>
+              </label>
+              <label class="tool-option">
+                <input type="radio" name="codegenToolPanel" value="codex" />
+                <span class="tool-label">⚡ Codex</span>
+                <small>OpenAI Codex CLI</small>
+              </label>
+              <label class="tool-option">
+                <input type="radio" name="codegenToolPanel" value="cursor" />
+                <span class="tool-label">📝 Cursor Agent</span>
+                <small>Cursor `agent` CLI</small>
+              </label>
+            </div>
+            <div class="panel-actions" id="codegenStartActions">
+              <button type="button" class="btn primary" id="btnStartCodegen">开始生成代码</button>
+            </div>
+            <div id="codegenStatus" class="card"></div>
+            <div class="live-progress" id="codegenLiveProgress">
+              <div class="live-progress-header">
+                <strong>实施进度</strong>
+                <span id="codegenLiveBadge" class="live-badge idle">待命</span>
+              </div>
+              <pre class="log live-log" id="codegenLog"></pre>
+            </div>
+          </div>
+
+          <aside class="codegen-chat" id="codegenChatPanel">
+            <div class="chat-header">
+              <h3>补充对话</h3>
+              <small>修复 Bug / 追加需求</small>
+            </div>
+            <div class="chat-messages" id="followupChatMessages">
+              <div class="chat-empty" id="followupChatEmpty">
+                项目生成完成后，可在此继续发送指令，例如：「修复首页跳转失败」「给 page2 增加搜索功能」。
+              </div>
+            </div>
+            <div class="chat-composer">
+              <textarea
+                id="followupChatInput"
+                rows="3"
+                placeholder="输入补充指令…（Enter 发送，Shift+Enter 换行）"
+              ></textarea>
+              <div class="chat-composer-actions">
+                <span class="chat-hint" id="followupChatHint">需先完成初始化并生成项目</span>
+                <button type="button" class="btn primary" id="btnSendFollowup" disabled>发送</button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="panel hidden" id="panel-evaluate">
+        <h2>整理测试发布</h2>
+        <p class="hint" id="evaluateHint">整理 README → HBuilderX 测到 Chrome → 推送到 Git 分支。</p>
+
+        <div class="card release-step-card" id="cardPrepareReadme">
+          <h3>1. 整理</h3>
+          <p class="hint">根据已确认需求，生成详细功能清单并写入项目 <code>README.md</code>。</p>
+          <div class="release-status" id="readmeStatus">尚未生成</div>
+          <div class="panel-actions">
+            <button type="button" class="btn primary" id="btnPrepareReadme">生成功能清单</button>
+            <button type="button" class="btn secondary" id="btnOpenInCursor" disabled>用 Cursor 打开</button>
+          </div>
+        </div>
+
+        <div class="card release-step-card" id="cardH5Test">
+          <h3>2. 测试</h3>
+          <p class="hint">每次测试会清空该项目 H5 编译产物后重新编译；不同项目使用独立端口（8100–8999）。</p>
+          <div class="release-status" id="h5TestStatus">尚未测试</div>
+          <div class="test-url-box hidden" id="h5TestUrlBox">
+            <span class="test-url-label">测试地址</span>
+            <a id="h5TestUrlLink" href="#" target="_blank" rel="noopener"></a>
+            <span class="test-port" id="h5TestPort"></span>
+          </div>
+          <div class="panel-actions">
+            <button type="button" class="btn primary" id="btnRunH5Test">运行到 Chrome</button>
+            <button type="button" class="btn danger" id="btnStopH5Test" disabled>关闭测试端口</button>
+          </div>
+        </div>
+
+        <div class="card release-step-card" id="cardPublish">
+          <h3>3. 发布</h3>
+          <p class="hint">拉取目标仓库最新代码；若分支已存在请改名。不存在则新建分支、拷贝项目并推送远程。</p>
+          <label>
+            仓库路径
+            <input type="text" id="publishRepoPath" placeholder="/Users/shihongwei/uniapp1/uniapp" />
+          </label>
+          <label>
+            分支名称
+            <input type="text" id="publishBranch" placeholder="g1/huakaiduoduo" />
+          </label>
+          <p class="hint" id="publishBranchHint">默认规则：组号/产品目录全拼</p>
+          <div class="release-status" id="publishStatus">尚未发布</div>
+          <div class="test-url-box hidden" id="publishResultBox">
+            <span class="test-url-label">远程分支</span>
+            <span id="publishResultBranch"></span>
+            <span class="test-port" id="publishResultCommit"></span>
+          </div>
+          <div class="panel-actions">
+            <button type="button" class="btn primary" id="btnPublish">发布到远程</button>
+          </div>
+        </div>
+
+        <div class="panel-actions" style="margin-top: 1rem;">
+          <button type="button" class="btn primary" id="btnCompleteWorkflow" disabled>完成工作流</button>
+        </div>
+      </section>
+    </main>
+
+    <div class="step-pager" id="stepPager">
+      <button type="button" class="btn" id="btnPrevStep">上一步</button>
+      <span id="pagerLabel"></span>
+      <button type="button" class="btn" id="btnNextStep">下一步</button>
+    </div>
+
+    <footer class="footer">
+      <span id="sessionInfo"></span>
+      <span id="modelInfo"></span>
+      <button type="button" class="btn-debug" id="btnShowDebugLog" title="显示调试日志">🔍 日志</button>
+    </footer>
+    </div>
+  </div>
+
+  <!-- 调试日志窗口 -->
+  <div class="debug-panel" id="debugPanel">
+    <div class="debug-header">
+      <h3>🔍 调试日志系统</h3>
+      <div class="debug-actions">
+        <button type="button" class="btn-icon" id="btnClearLogs" title="清空日志">🗑️</button>
+        <button type="button" class="btn-icon" id="btnCopyLogs" title="复制日志">📋</button>
+        <button type="button" class="btn-icon" id="btnCloseLogs" title="关闭日志">❌</button>
+      </div>
+    </div>
+    <div class="debug-content">
+      <div class="debug-filters">
+        <label>
+          <input type="checkbox" id="filterInfo" checked /> INFO
+        </label>
+        <label>
+          <input type="checkbox" id="filterDebug" checked /> DEBUG
+        </label>
+        <label>
+          <input type="checkbox" id="filterWarn" checked /> WARN
+        </label>
+        <label>
+          <input type="checkbox" id="filterError" checked /> ERROR
+        </label>
+      </div>
+      <pre class="debug-log" id="debugLog"></pre>
+    </div>
+  </div>
+
+  <script>
+    window.__STYLES__ = {{ styles | tojson }};
+  </script>
+  <script src="/static/logger.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

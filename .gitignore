@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Runtime & secrets
+# Runtime & secrets
+local_config.yaml
+.env
+.env.*
+!.env.example
+.runtime/
+*.log
+
+# Java
+backend-java/target/
+*.class
+*.jar
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
+
+# Harness local overrides
+.claude/settings.local.json
+.harness/changes/*/artifacts/

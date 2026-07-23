@@ -1,0 +1,53 @@
+# App 生成工作流配置
+
+ui_styles:
+  - id: ai-native
+    name: AI 原生
+  - id: glassmorphism
+    name: 玻璃拟态
+  - id: bento-grid
+    name: 便当格布局
+  - id: 3d-skeuomorphism
+    name: 3D 拟物
+  - id: soft-brutalism
+    name: 柔化粗野主义
+  - id: kinetic-typography
+    name: 动态排版与微交互叙事
+  - id: warm-handcrafted
+    name: 温暖手工质感
+  - id: sci-fi-gradient
+    name: 科幻未来感渐变
+  - id: calm-ui
+    name: 低刺激 / 极简沉浸
+  - id: md3-expressive
+    name: MD3 表现力
+  - id: alexandria
+    name: 亚历山大 / 经典阅读
+  - id: bauhaus
+    name: 包豪斯 / 艺术工业
+  - id: glacier
+    name: 冰川 / 清透
+  - id: carbon
+    name: 碳黑 / 极客深灰
+  - id: neon-tokyo
+    name: 霓虹东京 / 赛博朋克
+  - id: terra
+    name: 大地 / 自然
+  - id: silk
+    name: 丝绸 / 柔和
+  - id: obsidian
+    name: 黑曜石 / 深邃
+  - id: candy
+    name: 糖果 / 甜美
+
+frameworks:
+  - id: vue
+    name: Vue (uni-app)
+
+llm_models:
+  - deepseek/deepseek-v4-flash
+  - deepseek/deepseek-v4-pro
+
+pages:
+  count: 4
+  keys: [page1, page2, page3, page4]
