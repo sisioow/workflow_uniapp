@@ -1586,27 +1586,6 @@ def run_evaluate(state: WorkflowState) -> WorkflowState:
     return state
 
 
-# 写入功能清单时优先摘录的主题色变量（背景 / 页面氛围相关优先）
-_THEME_VAR_PRIORITY = (
-    "theme-page-gradient",
-    "theme-surface",
-    "theme-surface-container",
-    "theme-primary",
-    "theme-primary-soft",
-    "theme-primary-light",
-    "theme-primary-pale",
-    "theme-secondary",
-    "theme-secondary-container",
-    "theme-tertiary",
-    "theme-tertiary-container",
-    "theme-nav-bg",
-    "theme-tab-bg",
-    "theme-on-surface",
-    "theme-on-surface-variant",
-    "theme-outline",
-)
-
-
 def _resolve_style_and_color(state: WorkflowState) -> tuple[str, str, str]:
     """返回 (style_id, style_name, color_hint)。"""
     if 0 <= state.selected_task_index < len(state.style_tasks):
@@ -1626,41 +1605,58 @@ def _resolve_style_and_color(state: WorkflowState) -> tuple[str, str, str]:
     return "", "", ""
 
 
-def _extract_theme_vars(project_path: str | Path) -> list[tuple[str, str]]:
-    """从项目 common/theme.scss 提取主题色变量，按背景相关优先级排序。"""
-    theme_file = Path(project_path) / "common" / "theme.scss"
-    if not theme_file.is_file():
-        return []
-    try:
-        text = theme_file.read_text(encoding="utf-8")
-    except OSError:
-        return []
+def _first_hex_color(text: str) -> str:
+    """从字符串中提取首个 #RGB / #RRGGBB，统一为小写 #rrggbb；无则空串。"""
+    if not text:
+        return ""
+    m = re.search(r"#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b", text)
+    if not m:
+        return ""
+    raw = m.group(1).lower()
+    if len(raw) == 3:
+        raw = "".join(ch * 2 for ch in raw)
+    return f"#{raw}"
 
-    found: dict[str, str] = {}
-    for match in re.finditer(
-        r"^\s*\$([A-Za-z0-9_-]+)\s*:\s*(.+?)\s*;\s*$",
-        text,
-        flags=re.MULTILINE,
-    ):
-        name = match.group(1).strip()
-        value = match.group(2).strip()
-        if not name.startswith("theme-"):
-            continue
-        # 跳过 mixin 无关的纯效果变量可保留；blur 等也有参考价值
-        found[name] = value
 
-    ordered: list[tuple[str, str]] = []
-    for key in _THEME_VAR_PRIORITY:
-        if key in found:
-            ordered.append((key, found.pop(key)))
-    # 其余 theme-* 变量按名称追加，避免遗漏自定义色
-    for key in sorted(found.keys()):
-        ordered.append((key, found[key]))
-    return ordered
+def _page_bg_hex(state: WorkflowState) -> str:
+    """首页背景色：优先 theme.scss 背景相关 hex，其次 color_hint 中的 hex，默认 #ffffff。"""
+    # 从 theme.scss 按优先级取第一个纯 hex（忽略 rgba/gradient 中若无 # 则跳过；渐变取首个 #）
+    if state.project_path:
+        theme_file = Path(state.project_path) / "common" / "theme.scss"
+        if theme_file.is_file():
+            try:
+                text = theme_file.read_text(encoding="utf-8")
+            except OSError:
+                text = ""
+            if text:
+                vars_map: dict[str, str] = {}
+                for match in re.finditer(
+                    r"^\s*\$([A-Za-z0-9_-]+)\s*:\s*(.+?)\s*;\s*$",
+                    text,
+                    flags=re.MULTILINE,
+                ):
+                    vars_map[match.group(1).strip()] = match.group(2).strip()
+                for key in (
+                    "theme-page-gradient",
+                    "theme-surface",
+                    "theme-primary-pale",
+                    "theme-nav-bg",
+                    "theme-primary-soft",
+                    "theme-primary-light",
+                ):
+                    hex_color = _first_hex_color(vars_map.get(key, ""))
+                    if hex_color:
+                        return hex_color
+
+    _, _, color_hint = _resolve_style_and_color(state)
+    hex_from_hint = _first_hex_color(color_hint)
+    if hex_from_hint:
+        return hex_from_hint
+    return "#ffffff"
 
 
 def build_feature_readme(state: WorkflowState) -> str:
-    """根据需求方案整理详细功能清单 Markdown（含背景主题颜色参数）。"""
+    """根据需求方案整理详细功能清单 Markdown（含首页背景色参数）。"""
     req = state.requirement
     app_name = (req.app_name if req else None) or state.app_name or "未命名应用"
     direction = (req.direction if req else "") or ""
@@ -1713,56 +1709,15 @@ def build_feature_readme(state: WorkflowState) -> str:
             lines.append(f"- {item}")
         lines.append("")
 
-    style_id, style_name, color_hint = _resolve_style_and_color(state)
-    theme_vars = _extract_theme_vars(state.project_path) if state.project_path else []
+    _, style_name, _ = _resolve_style_and_color(state)
+    page_bg = _page_bg_hex(state)
 
     lines += [
         "## 视觉与主题色",
         "",
-        "生成与验收时请保持页面背景与主题色一致（来源：所选风格配色 + 项目 `common/theme.scss`）。",
+        f"- 首页背景色：`{page_bg}`",
         "",
     ]
-    if style_name or style_id or color_hint:
-        lines.append("### 方案配色参数")
-        lines.append("")
-        if style_name:
-            lines.append(f"- UI 风格：{style_name}" + (f"（`{style_id}`）" if style_id else ""))
-        elif style_id:
-            lines.append(f"- UI 风格 ID：`{style_id}`")
-        if color_hint:
-            lines.append(f"- 背景 / 主色调参数（color_hint）：`{color_hint}`")
-        else:
-            lines.append("- 背景 / 主色调参数（color_hint）：未指定（使用风格默认）")
-        lines.append("")
-    else:
-        lines += ["_尚未记录 UI 风格或配色参数。_", ""]
-
-    if theme_vars:
-        lines += [
-            "### 项目主题变量（`common/theme.scss`）",
-            "",
-            "| 变量 | 值 |",
-            "|------|----|",
-        ]
-        for name, value in theme_vars:
-            # 表格内竖线转义，避免破坏 markdown
-            safe_val = value.replace("|", "\\|")
-            lines.append(f"| `${name}` | `{safe_val}` |")
-        lines.append("")
-        # 背景相关单独强调，方便一眼看到页面底色
-        bg_keys = {
-            "theme-page-gradient",
-            "theme-surface",
-            "theme-surface-container",
-            "theme-primary-pale",
-            "theme-nav-bg",
-            "theme-tab-bg",
-        }
-        bg_lines = [f"- `${n}`：`{v}`" for n, v in theme_vars if n in bg_keys]
-        if bg_lines:
-            lines += ["**背景相关**：", ""]
-            lines.extend(bg_lines)
-            lines.append("")
 
     lines += [
         "## 技术信息",
@@ -1772,8 +1727,6 @@ def build_feature_readme(state: WorkflowState) -> str:
     ]
     if style_name:
         lines.append(f"- UI 风格：{style_name}")
-    if color_hint:
-        lines.append(f"- 配色参数：{color_hint}")
     if state.group_no:
         lines.append(f"- 组号：{state.group_no}")
     lines += [
