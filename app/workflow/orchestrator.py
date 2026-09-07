@@ -2072,6 +2072,7 @@ class WorkflowOrchestrator:
         llm_model: str = "",
         group_no: str = "",
     ) -> WorkflowState:
+        """创建会话并进入分析中；实际 LLM 调用由 API 异步触发，避免启动接口被 524 拖死。"""
         from datetime import datetime, timezone
 
         state = WorkflowState(
@@ -2082,10 +2083,17 @@ class WorkflowOrchestrator:
             llm_model=llm_model.strip(),
             created_at=datetime.now(timezone.utc).isoformat(),
             step=WorkflowStep.ANALYZE,
+            analyze_running=True,
         )
-        state = run_analyze(state)
+        model_label = state.llm_model or "默认"
+        state.append_log(f"会话已创建：{state.app_name}")
+        state.append_log(f"⏳ 正在调用模型 {model_label} 进行需求分析…")
         self.save(state)
         return state
+
+    def run_analyze_step(self, extra_prompt: str = "") -> WorkflowState:
+        """执行需求分析（供 start / 重试后台任务调用）。"""
+        return self.retry_analyze(extra_prompt=extra_prompt)
 
     def confirm_requirement(self) -> WorkflowState:
         """用户确认需求方案后，进入 UI 风格选择步骤。"""

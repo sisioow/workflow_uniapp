@@ -1618,7 +1618,7 @@ document.getElementById("formStart").addEventListener("submit", async (e) => {
     if (!res.ok) throw new Error(await res.text());
 
     const result = await res.json();
-    window.log?.workflow(`✅ 项目启动成功: session_id=${result.session_id}`);
+    window.log?.workflow(`✅ 项目已创建，需求分析进行中: session_id=${result.session_id}`);
 
     applyState(result, { autoNavigate: true, resetToolPreference: true });
     subscribeEvents();

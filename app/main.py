@@ -160,13 +160,37 @@ async def delete_session(session_id: str) -> dict[str, Any]:
 
 @app.post("/api/session/start")
 async def start_session(body: StartRequest) -> dict[str, Any]:
+    """创建会话并异步启动需求分析（避免 LLM 长耗时/524 导致启动接口失败）。"""
     orch = WorkflowOrchestrator()
     try:
         state = orch.start(body.app_name, body.project_dir, body.llm_model, body.group_no)
-        return state.to_public_dict()
     except Exception as exc:
         logger.exception("start failed")
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    session_id = state.session_id
+
+    async def _run() -> None:
+        try:
+            await asyncio.to_thread(orch.run_analyze_step, "")
+            logger.info("启动后需求分析完成: %s", session_id)
+        except asyncio.CancelledError:
+            logger.info("启动后需求分析已取消: %s", session_id)
+            raise
+        except Exception as exc:
+            logger.exception("启动后需求分析异常: %s", session_id)
+            state_err = orch.get_state()
+            if cancel_hub.is_cancelled(session_id):
+                return
+            state_err.step = WorkflowStep.ERROR
+            state_err.error_step = WorkflowStep.ANALYZE
+            state_err.analyze_running = False
+            state_err.error = str(exc)
+            state_err.append_log(f"❌ 需求分析异常: {exc}")
+            orch.save(state_err)
+
+    _track_session_task(session_id, asyncio.create_task(_run()))
+    return state.to_public_dict()
 
 
 @app.post("/api/session/{session_id}/confirm-requirement")

@@ -10,8 +10,8 @@ disable-model-invocation: true
 
 ## 步骤（前端 8 步）
 
-1. **input / analyze** — 应用信息与 LLM 需求分析（4 页 JSON）
-   - 需求设计遵循 **pm-brainstorm**（JTBD/HMW 发散 → 三套方向收敛）
+1. **input / analyze** — 应用信息与 LLM 需求分析（三套不同方向，每套 4 页完整需求）
+   - 需求设计遵循 **pm-brainstorm**（JTBD/HMW 发散 → 三套方向收敛；每套须功能完整，禁止小品 Demo）
 2. **review_requirement** — 审核三套方向方案，可编辑 / 带提示词重试后确认
 3. **select_styles** — 选择 1~19 种风格；路线：Stitch 或 **跳过设计**
 4. **design** — Stitch 并行设计（每风格 4 屏）；可暂停
