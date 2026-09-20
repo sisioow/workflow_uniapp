@@ -37,6 +37,8 @@ codegen:
   claude_model: ""
   cursor_bin: agent   # 也可用 cursor（将自动变为 cursor agent）；勿用 GUI 的 cursor composer
   cursor_model: ""
+  antigravity_bin: agy  # Antigravity CLI（本机常见路径 ~/.local/bin/agy）
+  antigravity_model: ""
 
 # ── HBuilderX（第 8 步「测试」运行到 Chrome）──
 hbuilderx:

@@ -11,7 +11,7 @@ flowchart TD
     D -->|跳过设计| F[选择最终方案 + 代码工具]
     E --> F
     F --> G[拷贝 uni-app 模板]
-    G --> H[Claude / Codex / Cursor 代码生成]
+    G --> H[Claude / Codex / Cursor / Antigravity 代码生成]
     H --> I[整理 README + H5 测试 + Git 发布]
 ```
 

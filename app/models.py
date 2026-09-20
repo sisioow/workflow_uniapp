@@ -98,7 +98,7 @@ class WorkflowState(BaseModel):
     created_at: str = ""  # ISO 创建时间，用于侧边栏列表展示
     framework: str = "vue"
     llm_model: str = ""
-    codegen_tool: str = "claude"  # codex | claude | cursor — 默认 Claude Code
+    codegen_tool: str = "claude"  # codex | claude | cursor | antigravity — 默认 Claude Code
     codegen_running: bool = False  # 是否正在执行代码生成
     codegen_started_at: float = 0.0  # 代码生成开始时间戳，用于僵死状态回收
     design_running: bool = False  # 是否正在执行 Stitch 设计生成

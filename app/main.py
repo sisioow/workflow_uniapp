@@ -414,7 +414,7 @@ class GenerateCodeRequest(BaseModel):
 @app.post("/api/session/{session_id}/generate-code")
 async def generate_code(session_id: str, body: GenerateCodeRequest) -> dict[str, Any]:
     tool = (body.codegen_tool or "claude").strip().lower()
-    if tool not in ("codex", "claude", "cursor"):
+    if tool not in ("codex", "claude", "cursor", "antigravity"):
         raise HTTPException(status_code=400, detail=f"不支持的代码生成工具: {tool}")
 
     orch = WorkflowOrchestrator(session_id)

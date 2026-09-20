@@ -522,13 +522,14 @@ class StitchMcpClient:
 
     for attempt in range(1, attempts + 1):
       try:
+        # 不传 modelId：当前 Stitch 对 GEMINI_3_FLASH / GEMINI_3_1_PRO 会直接
+        # 返回「Request contains an invalid argument」；省略后走服务端默认模型。
         data = self.call_tool(
           "generate_screen_from_text",
           {
             "projectId": project_id,
             "prompt": prompt,
             "deviceType": device_type,
-            "modelId": "GEMINI_3_FLASH",
           },
           use_oauth=False,
         )
@@ -591,13 +592,11 @@ class StitchMcpClient:
       return []
 
   def get_screen(self, project_id: str, screen_id: str) -> dict[str, Any]:
+    # 当前 Stitch get_screen 仅接受 name；多传 projectId/screenId 会
+    # 返回「Request contains an invalid argument」。
     return self.call_tool(
       "get_screen",
-      {
-        "name": f"projects/{project_id}/screens/{screen_id}",
-        "projectId": project_id,
-        "screenId": screen_id,
-      },
+      {"name": f"projects/{project_id}/screens/{screen_id}"},
     )
 
   @staticmethod

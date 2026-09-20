@@ -500,7 +500,7 @@ function stopCodegenElapsedTimer() {
   }
 }
 
-/** 生成进行中时每秒刷新耗时（Claude / Codex / Cursor 共用）；后端结束后停止 */
+/** 生成进行中时每秒刷新耗时（Claude / Codex / Cursor / Antigravity 共用）；后端结束后停止 */
 function ensureCodegenElapsedTimer() {
   if (!state?.codegen_running) {
     stopCodegenElapsedTimer();
@@ -632,6 +632,7 @@ const CODEGEN_TOOL_LABELS = {
   codex: "Codex",
   claude: "Claude Code",
   cursor: "Cursor Agent",
+  antigravity: "Antigravity CLI",
 };
 
 /** 用户选择的工具（默认 Claude Code）；SSE 不得用后端默认值覆盖 */

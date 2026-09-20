@@ -48,7 +48,7 @@ def main() -> None:
     gen_p.add_argument(
         "--tool",
         default="claude",
-        choices=["codex", "claude", "cursor"],
+        choices=["codex", "claude", "cursor", "antigravity"],
         help="代码生成工具（默认 claude）",
     )
 

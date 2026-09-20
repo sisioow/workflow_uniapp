@@ -52,11 +52,11 @@ public class StitchClient {
     }
 
     public String generateScreen(String projectId, String prompt) {
+        // 不传 modelId：当前 Stitch 对 GEMINI_3_FLASH 等会返回 invalid argument
         var result = callTool("generate_screen_from_text", Map.of(
                 "projectId", projectId,
                 "prompt", prompt,
-                "deviceType", "MOBILE",
-                "modelId", "GEMINI_3_FLASH"
+                "deviceType", "MOBILE"
         ), true);
         // 与 Python 版相同的 screen_id 提取逻辑
         String name = result.has("name") ? result.get("name").asText() :
@@ -66,10 +66,9 @@ public class StitchClient {
     }
 
     public JsonNode getScreen(String projectId, String screenId) {
+        // 仅传 name：多传 projectId/screenId 会触发 invalid argument
         return callTool("get_screen", Map.of(
-                "name", "projects/" + projectId + "/screens/" + screenId,
-                "projectId", projectId,
-                "screenId", screenId
+                "name", "projects/" + projectId + "/screens/" + screenId
         ), true);
     }
 

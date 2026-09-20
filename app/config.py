@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     cursor_bin: str = "agent"
     cursor_model: str = ""
 
+    antigravity_bin: str = "agy"
+    antigravity_model: str = ""
+
     host: str = "0.0.0.0"
     port: int = 8765
 
@@ -108,6 +111,8 @@ def _settings_overrides_from_local(local: dict[str, Any]) -> dict[str, Any]:
         ("claude_model", "claude_model"),
         ("cursor_bin", "cursor_bin"),
         ("cursor_model", "cursor_model"),
+        ("antigravity_bin", "antigravity_bin"),
+        ("antigravity_model", "antigravity_model"),
     ):
         if src in codegen and codegen.get(src) is not None:
             overrides[dest] = str(codegen.get(src) or "").strip()

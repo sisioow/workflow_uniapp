@@ -237,7 +237,10 @@ CODEGEN_TOOL_LABELS = {
     "claude": "Claude Code",
     "codex": "Codex",
     "cursor": "Cursor Agent",
+    "antigravity": "Antigravity CLI",
 }
+
+CODEGEN_TOOLS = ("codex", "claude", "cursor", "antigravity")
 
 
 class StreamCmdResult:
@@ -1099,6 +1102,8 @@ def run_codegen(state: WorkflowState) -> WorkflowState:
         state = _run_codex(state, settings, project_path, prompt)
     elif tool == "cursor":
         state = _run_cursor(state, settings, project_path, prompt)
+    elif tool == "antigravity":
+        state = _run_antigravity(state, settings, project_path, prompt)
     else:
         state = _run_claude(state, settings, project_path, prompt)
 
@@ -1181,6 +1186,27 @@ def build_cursor_agent_command(settings: Any, project_path: str, prompt: str) ->
     if model:
         cmd.extend(["--model", model])
     cmd.append(prompt)
+    return cmd
+
+
+def build_antigravity_codegen_command(settings: Any, prompt: str) -> list[str]:
+    """构造 Antigravity CLI（agy）headless 命令。
+
+    - `-p/--print`：非交互单次提示
+    - `--dangerously-skip-permissions`：自动确认工具权限
+    - `--print-timeout 60m`：覆盖默认 5m，与工作流 1h 上限对齐
+    """
+    cmd = [
+        (getattr(settings, "antigravity_bin", None) or "agy").strip() or "agy",
+        "-p",
+        prompt,
+        "--dangerously-skip-permissions",
+        "--print-timeout",
+        "60m",
+    ]
+    model = (getattr(settings, "antigravity_model", None) or "").strip()
+    if model:
+        cmd.extend(["--model", model])
     return cmd
 
 
@@ -1358,6 +1384,25 @@ def execute_codegen_tool(
                 code, stdout = proc.returncode, proc.stdout or ""
         elif tool == "cursor":
             cmd = build_cursor_agent_command(settings, project_path, prompt)
+            if state is not None:
+                stream = stream_command_to_logs(
+                    state,
+                    cmd,
+                    cwd=project_path,
+                    quiet=True,
+                )
+                code, stdout = stream.returncode, stream.stdout
+            else:
+                proc = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=3600,
+                    cwd=project_path,
+                )
+                code, stdout = proc.returncode, proc.stdout or ""
+        elif tool == "antigravity":
+            cmd = build_antigravity_codegen_command(settings, prompt)
             if state is not None:
                 stream = stream_command_to_logs(
                     state,
@@ -1569,6 +1614,50 @@ def _run_cursor(state, settings, project_path, prompt):
         state.error_step = WorkflowStep.CODEGEN
         state.error = f"未找到 Cursor 可执行文件：{settings.cursor_bin}"
         record_error("codegen", "cursor_not_found", state.error)
+        _persist_state(state)
+        return state
+
+    state.step = WorkflowStep.EVALUATE
+    _persist_state(state)
+    return state
+
+
+def _run_antigravity(state, settings, project_path, prompt):
+    """使用 Antigravity CLI（agy）生成代码（终端输出不写入实施进度）。"""
+    cmd = build_antigravity_codegen_command(settings, prompt)
+    state.append_log(
+        f"Antigravity CLI 命令：{' '.join(cmd[:6])}{' …' if len(cmd) > 6 else ''}"
+    )
+    _persist_state(state)
+
+    try:
+        stream = stream_command_to_logs(
+            state,
+            cmd,
+            cwd=project_path,
+            quiet=True,
+        )
+        if stream.returncode != 0:
+            err = (stream.stdout or "").strip()[-1000:] or "未知错误"
+            state.step = WorkflowStep.ERROR
+            state.error_step = WorkflowStep.CODEGEN
+            state.error = f"Antigravity 退出码 {stream.returncode}: {err}"
+            state.append_log(state.error)
+            record_error("codegen", "antigravity_nonzero_exit", state.error)
+            _persist_state(state)
+            return state
+    except subprocess.TimeoutExpired:
+        state.step = WorkflowStep.ERROR
+        state.error_step = WorkflowStep.CODEGEN
+        state.error = "Antigravity 执行超时（>1h）"
+        record_error("codegen", "antigravity_timeout", state.error)
+        _persist_state(state)
+        return state
+    except FileNotFoundError:
+        state.step = WorkflowStep.ERROR
+        state.error_step = WorkflowStep.CODEGEN
+        state.error = f"未找到 Antigravity 可执行文件：{settings.antigravity_bin}"
+        record_error("codegen", "antigravity_not_found", state.error)
         _persist_state(state)
         return state
 
@@ -2293,7 +2382,7 @@ class WorkflowOrchestrator:
         if state.style_tasks[task_index].status != "done":
             raise ValueError("所选方案未完成设计")
         tool = (codegen_tool or "claude").strip().lower()
-        if tool not in ("codex", "claude", "cursor"):
+        if tool not in CODEGEN_TOOLS:
             raise ValueError(f"不支持的代码生成工具: {tool}")
         state.selected_task_index = task_index
         state.framework = framework
@@ -2319,7 +2408,7 @@ class WorkflowOrchestrator:
         cancel_hub.reset(self.store.session_id)
         state = self.get_state()
         tool = (codegen_tool or state.codegen_tool or "claude").strip().lower()
-        if tool not in ("codex", "claude", "cursor"):
+        if tool not in CODEGEN_TOOLS:
             tool = "claude"
         state.codegen_tool = tool
         # API 层可能已提前置位；此处确保标志一致
@@ -2457,7 +2546,7 @@ class WorkflowOrchestrator:
             raise ValueError("指令过长（最多 8000 字）")
 
         tool = (codegen_tool or state.codegen_tool or "claude").strip().lower()
-        if tool not in ("codex", "claude", "cursor"):
+        if tool not in CODEGEN_TOOLS:
             tool = "claude"
 
         state.codegen_tool = tool

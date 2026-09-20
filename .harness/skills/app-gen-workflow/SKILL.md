@@ -1,7 +1,7 @@
 ---
 name: app-gen-workflow
 description: >-
-  Orchestrates app requirement analysis, Stitch UI design, and Claude/Codex/Cursor
+  Orchestrates app requirement analysis, Stitch UI design, and Claude/Codex/Cursor/Antigravity
   code generation for uni-app projects. Use when running the local workflow pipeline.
 disable-model-invocation: true
 ---
@@ -29,7 +29,7 @@ disable-model-invocation: true
 
 ## 代码生成工具
 
-在第 **6** 步选择：`claude`（默认）| `codex` | `cursor`
+在第 **6** 步选择：`claude`（默认）| `codex` | `cursor` | `antigravity`
 
 ## 相关 Skills
 

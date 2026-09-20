@@ -24,7 +24,7 @@ cp local_config.example.yaml local_config.yaml
 - **8 步向导**：应用信息 → 需求分析 → 审核 → 风格 → 设计 → 选方案 → 代码生成 → 整理/测试/发布
 - **侧栏项目列表**：组号筛选、创建时间、删除项目（会终止相关进程）
 - **设计路线**：Stitch MCP 设计 / 跳过设计直接进选方案
-- **代码生成**：Claude Code（默认）/ Codex / Cursor Agent，可暂停、补充对话
+- **代码生成**：Claude Code（默认）/ Codex / Cursor Agent / Antigravity CLI，可暂停、补充对话
 - **第 8 步**：README 功能清单、HBuilderX H5 测试（独立端口）、Git 发布、用 Cursor 打开项目
 
 ## 配置要点
@@ -36,7 +36,7 @@ cp local_config.example.yaml local_config.yaml
 | `llm.*` | OpenAI 兼容接口与模型 |
 | `stitch.*` | Google Stitch MCP |
 | `uniapp.*` | 模板目录与输出目录 |
-| `codegen.*` | Claude / Codex / Cursor CLI |
+| `codegen.*` | Claude / Codex / Cursor / Antigravity CLI |
 | `hbuilderx.*` | 第 8 步 H5 测试 |
 | `publish.*` | 默认 Git 仓库与 base 分支 |
 | `server.*` | 监听 host / port |
@@ -118,7 +118,7 @@ python cli.py start "应用名" project_dir [--group-no g1]
 # 2) 为会话跑 Stitch 设计（风格 id 见 config.yaml）
 python cli.py design <session_id> --styles ai-native,glacier [--colors "紫色；蓝色"]
 
-# 3) 选方案并生成代码（工具：claude | codex | cursor）
+# 3) 选方案并生成代码（工具：claude | codex | cursor | antigravity）
 python cli.py generate <session_id> [--plan 0] [--framework vue] [--tool claude]
 
 # 4) 查看会话状态
